@@ -7,10 +7,8 @@ import spark.Route;
 import static spark.Spark.halt;
 
 
-import edu.upenn.cis.cis455.storage.Storage;
-import edu.upenn.cis.cis455.storage.StorageInterface;
-
-import java.rmi.server.ExportException;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
 
 public class SubscriptionHandler implements Route {
 

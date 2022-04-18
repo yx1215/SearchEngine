@@ -1,4 +1,4 @@
-package edu.upenn.cis.cis455.storage;
+package edu.upenn.cis.cis455.storage.documentStorage;
 
 public interface StorageInterface {
 
@@ -10,7 +10,7 @@ public interface StorageInterface {
     /**
      * Add a new document, getting its ID
      */
-    public void addDocument(String url, String documentContents, String contentType);
+    public int addDocument(String url, String documentContents, String contentType);
 
     /**
      * Retrieves a document's contents by URL
