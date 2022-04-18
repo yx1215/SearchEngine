@@ -9,10 +9,10 @@ import spark.Response;
 import static spark.Spark.halt;
 
 
-import edu.upenn.cis.cis455.storage.User;
-import edu.upenn.cis.cis455.storage.Storage;
+import edu.upenn.cis.cis455.storage.documentStorage.User;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 import edu.upenn.cis.cis455.storage.StorageFactory;
-import edu.upenn.cis.cis455.storage.StorageInterface;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -36,7 +36,7 @@ public class StartCrawlerHandler implements Route {
             String startUrl = request.queryParams("startUrl");
             String size = request.queryParams("size");
             String count = request.queryParams("count");
-            Storage tmpDb = (Storage) StorageFactory.getDatabaseInstance(this.db.dir);
+            Storage tmpDb = (Storage) StorageFactory.getDocumentDatabase(this.db.dir);
             logger.info("Start Crawling at: " + startUrl);
             logger.info(crawlerThread);
             if (crawlerThread == null || !crawlerThread.getState().toString().equals("RUNNABLE")){

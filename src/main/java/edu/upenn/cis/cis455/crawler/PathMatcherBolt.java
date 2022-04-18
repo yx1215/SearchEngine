@@ -1,11 +1,10 @@
 package edu.upenn.cis.cis455.crawler;
 
-import edu.upenn.cis.cis455.storage.Channel;
-import edu.upenn.cis.cis455.storage.Storage;
+import edu.upenn.cis.cis455.storage.documentStorage.Channel;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 import edu.upenn.cis.cis455.xpathengine.OccurrenceEvent;
 import edu.upenn.cis.cis455.xpathengine.XPathEngine;
 import edu.upenn.cis.cis455.xpathengine.XPathEngineFactory;
-import edu.upenn.cis.cis455.xpathengine.XPathEngineImp;
 import edu.upenn.cis.stormlite.OutputFieldsDeclarer;
 import edu.upenn.cis.stormlite.TopologyContext;
 import edu.upenn.cis.stormlite.bolt.IRichBolt;
@@ -90,7 +89,7 @@ public class PathMatcherBolt implements IRichBolt {
 
                 boolean[] matchResults = curEngine.getMatchResult();
                 for (int i=0;i<matchResults.length; i++){
-                    if (matchResults[i] && this.db.getDocumentObject(url) != null){
+                    if (matchResults[i] && this.db.getDocument(url) != null){
                         String channelName = channelNames.get(i);
                         Channel tmpChannel = this.db.getChannel(channelName);
                         tmpChannel.addUrl(url);
@@ -104,7 +103,7 @@ public class PathMatcherBolt implements IRichBolt {
             XPathEngine curEngine = this.xPathEngineImpHashMap.get(url);
             boolean[] matchResults = curEngine.evaluateEvent(event, type);
             for (int i=0;i<matchResults.length; i++){
-                if (matchResults[i] && this.db.getDocumentObject(url) != null){
+                if (matchResults[i] && this.db.getDocument(url) != null){
                     String channelName = channelNames.get(i);
                     Channel tmpChannel = this.db.getChannel(channelName);
                     tmpChannel.addUrl(url);

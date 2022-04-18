@@ -37,7 +37,24 @@
     <version>2.7.2</version>
 </dependency>
 
+        <dependency>
+            <groupId>edu.stanford.nlp</groupId>
+            <artifactId>stanford-corenlp</artifactId>
+            <version>4.4.0</version>
+        </dependency>
 
+        <dependency>
+            <groupId>edu.stanford.nlp</groupId>
+            <artifactId>stanford-corenlp</artifactId>
+            <version>4.4.0</version>
+            <classifier>models</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
+        </dependency>
 
         <dependency>
             <groupId>junit</groupId>
@@ -143,11 +160,11 @@
               <configuration>
                 <mainClass>edu.upenn.cis.cis455.crawler.Crawler</mainClass>
                 <arguments>
-                  <argument>https://crawltest.cis.upenn.edu/</argument>
-<!--                    <argument>https://en.wikipedia.org/</argument>-->
+<!--                  <argument>https://crawltest.cis.upenn.edu/</argument>-->
+                    <argument>https://en.wikipedia.org/</argument>
                   <argument>./database</argument>
                   <argument>1</argument>
-                  <argument>50</argument>
+                  <argument>30</argument>
                 </arguments>
               </configuration>
               </execution>

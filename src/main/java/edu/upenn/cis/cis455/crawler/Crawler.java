@@ -2,9 +2,10 @@ package edu.upenn.cis.cis455.crawler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.upenn.cis.cis455.storage.Storage;
+import edu.upenn.cis.cis455.Indexer.IndexerBolt;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 import edu.upenn.cis.cis455.storage.StorageFactory;
-import edu.upenn.cis.cis455.storage.StorageInterface;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
 
 import edu.upenn.cis.stormlite.*;
 import edu.upenn.cis.stormlite.tuple.Fields;
@@ -12,9 +13,6 @@ import org.apache.logging.log4j.Level;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Arrays;
-import static edu.upenn.cis.cis455.crawler.utils.CrawlerHandler.*;
 
 public class Crawler implements CrawlMaster {
     // TODO: you'll need to flesh all of this out. You'll need to build a thread pool of CrawlerWorkers etc.
@@ -27,6 +25,7 @@ public class Crawler implements CrawlMaster {
     private static final String LINK_EXTRACTOR_BOLT = "LINK_EXTRACTOR_BOLT";
     private static final String DOM_PARSE_BOLT = "DOM_PARSE_BOLT";
     private static final String PATH_MATCHER_BOLT = "PATH_MATCHER_BOLT";
+    private static final String INDEXER_BOLT = "INDEXER_BOLT";
 
     String startUrl;
 
@@ -68,6 +67,7 @@ public class Crawler implements CrawlMaster {
         LinkExtractorBolt linkExtractorBolt = new LinkExtractorBolt();
         DOMParseBolt domParseBolt = new DOMParseBolt();
         PathMatcherBolt pathMatcherBolt = new PathMatcherBolt();
+        IndexerBolt indexerBolt = new IndexerBolt();
 
         TopologyBuilder builder = new TopologyBuilder();
 
@@ -77,9 +77,9 @@ public class Crawler implements CrawlMaster {
 
         builder.setBolt(LINK_EXTRACTOR_BOLT, linkExtractorBolt, 4).shuffleGrouping(DOCUMENT_FETCHER_BOLT);
 
-        builder.setBolt(DOM_PARSE_BOLT, domParseBolt, 1).shuffleGrouping(DOCUMENT_FETCHER_BOLT);
-
-        builder.setBolt(PATH_MATCHER_BOLT, pathMatcherBolt, 1).fieldsGrouping(DOM_PARSE_BOLT, new Fields("url"));
+//        builder.setBolt(DOM_PARSE_BOLT, domParseBolt, 1).shuffleGrouping(DOCUMENT_FETCHER_BOLT);
+//
+//        builder.setBolt(PATH_MATCHER_BOLT, pathMatcherBolt, 1).fieldsGrouping(DOM_PARSE_BOLT, new Fields("url"));
 
         Topology topology = builder.createTopology();
 
@@ -166,14 +166,12 @@ public class Crawler implements CrawlMaster {
 
         logger.info("Crawler starting");
         String startUrl = args[0];
-//        String startUrl = "http://localhost:45555/index.html";
         String envPath = args[1];
         Integer size = Integer.valueOf(args[2]);
         Integer count = args.length == 4 ? Integer.valueOf(args[3]) : 100;
 
-        StorageInterface db = StorageFactory.getDatabaseInstance(envPath);
+        StorageInterface db = StorageFactory.getDocumentDatabase(envPath);
         logger.info("Current database contains " + db.getCorpusSize() + " pages.");
-//        System.out.println(getUrlContent(startUrl));
         Crawler crawler = new Crawler(startUrl, db, size, count);
         logger.info("Starting crawl of " + count + " documents, starting at " + startUrl);
 

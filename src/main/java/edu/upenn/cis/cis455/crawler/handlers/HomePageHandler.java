@@ -1,10 +1,9 @@
 package edu.upenn.cis.cis455.crawler.handlers;
 
-import edu.upenn.cis.cis455.crawler.DocumentFetcherBolt;
-import edu.upenn.cis.cis455.storage.Channel;
-import edu.upenn.cis.cis455.storage.Storage;
-import edu.upenn.cis.cis455.storage.StorageInterface;
-import edu.upenn.cis.cis455.storage.User;
+import edu.upenn.cis.cis455.storage.documentStorage.Channel;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
+import edu.upenn.cis.cis455.storage.documentStorage.User;
 
 import spark.Request;
 import spark.Response;

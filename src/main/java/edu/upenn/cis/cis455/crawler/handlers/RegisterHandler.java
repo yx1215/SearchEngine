@@ -7,7 +7,7 @@ import spark.HaltException;
 import static spark.Spark.halt;
 
 
-import edu.upenn.cis.cis455.storage.StorageInterface;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
 
 
 public class RegisterHandler implements Route {

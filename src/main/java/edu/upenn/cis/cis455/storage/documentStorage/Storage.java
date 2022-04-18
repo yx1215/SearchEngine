@@ -1,5 +1,8 @@
-package edu.upenn.cis.cis455.storage;
+package edu.upenn.cis.cis455.storage.documentStorage;
 
+import edu.upenn.cis.cis455.storage.indexStorage.ForwardIndex;
+import edu.upenn.cis.cis455.storage.indexStorage.Index;
+import edu.upenn.cis.cis455.storage.indexStorage.InvertIndex;
 import edu.upenn.cis.cis455.xpathengine.XPathEngineFactory;
 import edu.upenn.cis.cis455.xpathengine.XPathEngineImp;
 import org.apache.logging.log4j.LogManager;
@@ -10,6 +13,7 @@ import java.security.InvalidParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Storage implements StorageInterface{
     /**
@@ -17,20 +21,23 @@ public class Storage implements StorageInterface{
      */
     final static Logger logger = LogManager.getLogger(Storage.class);
 
-    private final StorageDatabase storageDatabase;
-    private final StorageView storageView;
+    public final StorageDatabase storageDatabase;
+    public final StorageView storageView;
 
     public String dir;
+
+    public AtomicInteger docId;
 
     public Storage(String dir){
         this.storageDatabase = new StorageDatabase(dir);
         this.storageView = new StorageView(this.storageDatabase);
         this.dir = dir;
+        this.docId = new AtomicInteger(this.storageView.getDocId2contentMap().size());
     }
 
     @Override
     public int getCorpusSize() {
-        return this.storageView.getDocumentEntrySet().size();
+        return this.storageView.getDocId2contentMap().size();
     }
 
     /**
@@ -40,11 +47,20 @@ public class Storage implements StorageInterface{
      * @param documentContents
      */
     @Override
-    public void addDocument(String url, String documentContents, String contentType) {
-        DatabaseDocument databaseDocument = new DatabaseDocument(documentContents, contentType);
-        Map documentMap = this.storageView.getDocumentMap();
-        documentMap.put(url, databaseDocument);
+    public int addDocument(String url, String documentContents, String contentType) {
+        DatabaseDocument databaseDocument = new DatabaseDocument(url, documentContents, contentType);
+        Map docId2content = this.storageView.getDocId2contentMap();
+        Map url2docId = this.storageView.getUrl2docIdMap();
+        int docId;
+        if (url2docId.containsKey(url)){
+            docId = (int) url2docId.get(url);
+        } else {
+            docId = this.docId.getAndIncrement();
+            url2docId.put(url, docId);
+        }
+        docId2content.put(docId, databaseDocument);
         this.storageDatabase.documentDbSync();
+        return docId;
     }
 
     /**
@@ -54,13 +70,41 @@ public class Storage implements StorageInterface{
      */
     @Override
     public DatabaseDocument getDocument(String url) {
-        Map documentMap = this.storageView.getDocumentMap();
-        DatabaseDocument databaseDocument = (DatabaseDocument) documentMap.get(url);
+        Map docId2content = this.storageView.getDocId2contentMap();
+        Map url2docId = this.storageView.getUrl2docIdMap();
+        if (!url2docId.containsKey(url)){
+            return null;
+        }
+        int docId = (int) url2docId.get(url);
+        DatabaseDocument databaseDocument = (DatabaseDocument) docId2content.get(docId);
         return databaseDocument;
     }
 
-    public DatabaseDocument getDocumentObject(String url){
-        return (DatabaseDocument) this.storageView.getDocumentMap().get(url);
+    public DatabaseDocument getDocById(int docId){
+        Map docId2content = this.storageView.getDocId2contentMap();
+        if (!docId2content.containsKey(docId)){
+            return null;
+        }
+
+        return (DatabaseDocument) docId2content.get(docId);
+    }
+
+    public String getUrlById(int docId){
+        Map url2docId = this.storageView.getUrl2docIdMap();
+        for (Object url: url2docId.keySet()){
+            if ((int) url2docId.get(url) == docId){
+                return (String) url;
+            }
+        }
+        return null;
+    }
+
+    public int getDocId(String url){
+        Map url2docId = this.storageView.getUrl2docIdMap();
+        if (!url2docId.containsKey(url)){
+            return -1;
+        }
+        return (int) url2docId.get(url);
     }
     /**
      * Adds a user and returns an ID
@@ -203,4 +247,6 @@ public class Storage implements StorageInterface{
     public Set getAllChannels(){
         return this.storageView.getChannelMap().keySet();
     }
+
+    public Set getAllUrl(){ return this.storageView.getUrl2docIdMap().keySet(); }
 }

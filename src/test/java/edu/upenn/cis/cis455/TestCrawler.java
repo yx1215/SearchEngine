@@ -1,8 +1,7 @@
 package edu.upenn.cis.cis455;
 
-import edu.upenn.cis.cis455.crawler.Crawler;
 import edu.upenn.cis.cis455.crawler.utils.URLInfo;
-import edu.upenn.cis.cis455.storage.Storage;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 import edu.upenn.cis.cis455.storage.StorageFactory;
 import static edu.upenn.cis.cis455.crawler.utils.CrawlerHandler.*;
 
@@ -57,7 +56,7 @@ public class TestCrawler extends TestCase {
 
     public void testGetUrlContentNotExist() throws IOException {
         Path tmp_path = Files.createTempDirectory("tmpDatabase");
-        Storage database = (Storage) StorageFactory.getDatabaseInstance(tmp_path.toString());
+        Storage database = (Storage) StorageFactory.getDocumentDatabase(tmp_path.toString());
         String url = "https://crawltest.cis.upenn.edu/";
         String body = getUrlContent("https://crawltest.cis.upenn.edu/notexist");
         assertNull(body);

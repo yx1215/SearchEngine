@@ -3,15 +3,13 @@ package edu.upenn.cis.cis455.crawler;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Date;
 
 import static spark.Spark.*;
 import spark.Session;
 
 import edu.upenn.cis.cis455.crawler.handlers.*;
-import edu.upenn.cis.cis455.storage.Storage;
 import edu.upenn.cis.cis455.storage.StorageFactory;
-import edu.upenn.cis.cis455.storage.StorageInterface;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
 import org.apache.logging.log4j.Level;
 
 
@@ -34,7 +32,7 @@ public class WebInterface {
         }
 
         port(45555);
-        StorageInterface database = StorageFactory.getDatabaseInstance(args[0]);
+        StorageInterface database = StorageFactory.getDocumentDatabase(args[0]);
         database.addAdmin();
         LoginFilter testIfLoggedIn = new LoginFilter(database);
 

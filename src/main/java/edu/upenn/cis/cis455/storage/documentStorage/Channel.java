@@ -1,4 +1,4 @@
-package edu.upenn.cis.cis455.storage;
+package edu.upenn.cis.cis455.storage.documentStorage;
 
 import java.io.Serializable;
 import java.util.ArrayList;

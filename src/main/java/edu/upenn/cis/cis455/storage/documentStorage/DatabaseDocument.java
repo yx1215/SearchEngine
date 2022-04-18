@@ -1,15 +1,17 @@
-package edu.upenn.cis.cis455.storage;
+package edu.upenn.cis.cis455.storage.documentStorage;
 
 import java.io.Serializable;
 import java.util.Date;
 
 public class DatabaseDocument implements Serializable {
 
+    private String url;
     private String content;
     private Date lastModified;
     private String contentType;
 
-    public DatabaseDocument(String content, String contentType){
+    public DatabaseDocument(String url, String content, String contentType){
+        this.url = url;
         this.content = content;
         this.lastModified = new Date();
         this.contentType = contentType;
@@ -27,4 +29,7 @@ public class DatabaseDocument implements Serializable {
         return this.contentType;
     }
 
+    public String getUrl() {
+        return url;
+    }
 }

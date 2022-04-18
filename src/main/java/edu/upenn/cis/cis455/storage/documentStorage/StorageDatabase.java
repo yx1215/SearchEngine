@@ -1,9 +1,10 @@
-package edu.upenn.cis.cis455.storage;
+package edu.upenn.cis.cis455.storage.documentStorage;
 
 
 import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.je.*;
 
+import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,8 +13,9 @@ import java.nio.file.Path;
 public class StorageDatabase {
 
     private static final String USER_STORE = "user_store";
-    private static final String DOCUMENT_STORE = "document_store";
     private static final String CHANNEL_STORE = "channel_store";
+    private static final String ID2CONTENT = "docId2content";
+    private static final String URL2ID = "url2docId";
 
     private static final String CONTENT_SEEN = "content_seen";
     private static final String CLASS_CATALOG = "class_catalog";
@@ -21,7 +23,10 @@ public class StorageDatabase {
     private final Environment env;
 
     private final Database userDb;
-    private final Database documentDb;
+
+    private final Database docId2contentDb;
+    private final Database url2docIdDb;
+
     private final Database contentSeen;
     private final Database channel;
 
@@ -54,8 +59,9 @@ public class StorageDatabase {
         this.classCatalog = new StoredClassCatalog(this.catalogDb);
 
         this.userDb = env.openDatabase(null, USER_STORE, dbConfig);
-        this.documentDb = env.openDatabase(null, DOCUMENT_STORE, dbConfig);
         this.channel = env.openDatabase(null, CHANNEL_STORE, dbConfig);
+        this.docId2contentDb = env.openDatabase(null, ID2CONTENT, dbConfig);
+        this.url2docIdDb = env.openDatabase(null, URL2ID, dbConfig);
 
         this.contentSeen = env.openDatabase(null, CONTENT_SEEN, contentSeenConfig);
 
@@ -64,7 +70,9 @@ public class StorageDatabase {
     public void close() {
 
         this.userDb.close();
-        this.documentDb.close();
+        this.docId2contentDb.close();
+        this.url2docIdDb.close();
+
         this.channel.close();
         this.contentSeen.close();
         this.classCatalog.close();
@@ -74,10 +82,6 @@ public class StorageDatabase {
 
     public final StoredClassCatalog getClassCatalog() {
         return this.classCatalog;
-    }
-
-    public Database getDocumentDb() {
-        return this.documentDb;
     }
 
     public Database getUserDb() {
@@ -92,6 +96,12 @@ public class StorageDatabase {
         return this.contentSeen;
     }
 
+    public Database getDocId2contentDb() {return this.docId2contentDb;}
+
+    public Database getUrl2docIdDb() {
+        return this.url2docIdDb;
+    }
+
     public void userDbSync(){
         this.catalogDb.sync();
         this.userDb.sync();
@@ -99,12 +109,14 @@ public class StorageDatabase {
 
     public void documentDbSync(){
         this.catalogDb.sync();
-        this.documentDb.sync();
+        this.url2docIdDb.sync();
+        this.docId2contentDb.sync();
     }
 
     public void channelSync(){
         this.catalogDb.sync();
         this.channel.sync();
     }
+
 
 }

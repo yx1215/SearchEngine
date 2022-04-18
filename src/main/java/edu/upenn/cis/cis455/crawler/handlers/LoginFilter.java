@@ -3,7 +3,7 @@ package edu.upenn.cis.cis455.crawler.handlers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import edu.upenn.cis.cis455.storage.StorageInterface;
+import edu.upenn.cis.cis455.storage.documentStorage.StorageInterface;
 
 
 import spark.Request;

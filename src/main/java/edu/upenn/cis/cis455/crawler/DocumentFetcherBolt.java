@@ -1,9 +1,8 @@
 package edu.upenn.cis.cis455.crawler;
 
 import edu.upenn.cis.cis455.crawler.utils.URLInfo;
-import edu.upenn.cis.cis455.storage.DatabaseDocument;
-import edu.upenn.cis.cis455.storage.Storage;
-import edu.upenn.cis.cis455.crawler.CrawlerSpout;
+import edu.upenn.cis.cis455.storage.documentStorage.DatabaseDocument;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 
 import edu.upenn.cis.stormlite.OutputFieldsDeclarer;
 import edu.upenn.cis.stormlite.TopologyContext;
@@ -124,7 +123,7 @@ public class DocumentFetcherBolt implements IRichBolt{
                                 if (!contentType.endsWith("xml") && !contentType.endsWith("html")) {
                                     logger.info("Improper content type, skip path: " + url);
                                 } else {
-                                    DatabaseDocument curDocument = db.getDocumentObject(url);
+                                    DatabaseDocument curDocument = db.getDocument(url);
                                     SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
                                     long lastCrawl = 0;
                                     long lastModified = 0;

@@ -1,6 +1,6 @@
 package edu.upenn.cis.cis455.crawler;
 
-import edu.upenn.cis.cis455.storage.Storage;
+import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 import edu.upenn.cis.stormlite.OutputFieldsDeclarer;
 import edu.upenn.cis.stormlite.TopologyContext;
 import edu.upenn.cis.stormlite.bolt.IRichBolt;
