@@ -37,7 +37,7 @@ public class IndexDatabase {
         File home = new File(dir);
         if (!home.exists()){
             try {
-                Files.createDirectory(Path.of(dir));
+                Files.createDirectory(home.toPath());
             } catch (IOException e) {
                 e.printStackTrace();
             }

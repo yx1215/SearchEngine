@@ -104,7 +104,7 @@ public class DocumentFetcherBolt implements IRichBolt{
                         if (!isDisallowed(urlInfo, this.disallow)) {
                             long lastCheck = this.checkPoints.get(urlInfo.getHostName()) == null ? new Date().getTime() : this.checkPoints.get(urlInfo.getHostName());
                             // TODO: change delay time when submitting.
-                            if (new Date().getTime() - lastCheck <= this.crawlDelay.get(host) * 10) {
+                            if (new Date().getTime() - lastCheck <= this.crawlDelay.get(host) * 100) {
                                 isDelay.set(true);
                                 CrawlerSpout.addUrl(url);
                             } else {

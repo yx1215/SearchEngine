@@ -1,5 +1,6 @@
 package edu.upenn.cis.cis455.Indexer;
 
+import edu.upenn.cis.IndexerHelper;
 import edu.upenn.cis.cis455.storage.documentStorage.Storage;
 import edu.upenn.cis.cis455.storage.indexStorage.IndexStorage;
 import edu.upenn.cis.stormlite.OutputFieldsDeclarer;
@@ -21,7 +22,6 @@ import java.util.UUID;
 public class IndexerBolt implements IRichBolt {
 
     static Logger logger = LogManager.getLogger(IndexerBolt.class);
-    public static ArrayList<String> tmp = new ArrayList<>();
 
     String executorId = UUID.randomUUID().toString();
 
@@ -66,18 +66,13 @@ public class IndexerBolt implements IRichBolt {
         int docId = this.documentDb.getDocId(url);
         if (docId != -1){
             logger.info("Indexing url: " + url);
-            ArrayList<String> words = IndexerHandler.lemmatize(Jsoup.parse(content).text());
+            ArrayList<String> words = IndexerHelper.lemmatize(Jsoup.parse(content).text());
             logger.info("Finish lemmatizing url: " + url);
             int pos = 0;
             HashMap<String, ArrayList<Integer>> wordPos = new HashMap<>();
             for (String word: words){
                 if (!wordPos.containsKey(word)){
                     wordPos.put(word, new ArrayList<>());
-                }
-                if (word.equals("Sea")){
-                    if (!tmp.contains(url)){
-                        tmp.add(url);
-                    }
                 }
                 ArrayList<Integer> tmpPos = wordPos.get(word);
                 tmpPos.add(pos);
