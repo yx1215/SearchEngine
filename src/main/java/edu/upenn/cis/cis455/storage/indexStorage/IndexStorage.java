@@ -6,10 +6,7 @@ import edu.upenn.cis.cis455.storage.documentStorage.StorageView;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class IndexStorage {
@@ -152,13 +149,20 @@ public class IndexStorage {
             return 0;
         }
         InvertIndex invertIndex = this.getInvertIndex(word);
-        System.out.println("Corpus Size " + this.getCorpusSize());
         System.out.println("Doc appearance of " + word + ": " + invertIndex.nDoc());
         return Math.log10((double) this.getCorpusSize() / invertIndex.nDoc());
     }
 
     public Set getAllDocId(){
         return this.indexView.getForwardIndexMap().keySet();
+    }
+
+    public Set getAllDocId(String word){
+        InvertIndex invertIndex = this.getInvertIndex(word);
+        if (invertIndex == null){
+            return null;
+        }
+        return invertIndex.getInvertIndices().keySet();
     }
 
 

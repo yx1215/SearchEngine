@@ -47,7 +47,6 @@ public class Indexer {
                 e.printStackTrace();
             }
         }
-        System.out.println(IndexerBolt.tmp);
         cluster.killTopology("test");
         while (!cluster.isTerminated()){
             try {
