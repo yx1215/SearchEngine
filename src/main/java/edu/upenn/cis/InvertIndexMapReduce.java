@@ -39,12 +39,14 @@ public class InvertIndexMapReduce {
             String word;
             if (curLine.length == 2){
                 String tmpKey = curLine[0].substring(1);
-                String count = curLine[1].trim();
+                String occurs = curLine[1].trim();
                 String[] keys = tmpKey.split(",");
                 if (keys.length == 2){
                     docId = keys[0];
                     word = keys[1];
-                    context.write(new Text(word), new Text("("+docId+","+count+")"));
+                    if (word.length() < 30){
+                        context.write(new Text(word), new Text("("+docId+"@"+occurs+")"));
+                    }
                 }
             }
         }
@@ -55,23 +57,16 @@ public class InvertIndexMapReduce {
         @Override
         public void reduce(Text word, Iterable<Text> occurs, Context context) throws IOException, InterruptedException {
             System.err.println(word);
-            AWSCredentials credentials = new BasicAWSCredentials(
-                    IndexerHelper.accessKey,
-                    IndexerHelper.secretKey
-            );
-            AmazonDynamoDB dynamoDB = AmazonDynamoDBClientBuilder.standard()
-                    .withRegion(Regions.US_EAST_1)
-                    .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                    .build();
+            AmazonDynamoDB dynamoDB = IndexerHelper.getDynamoDB();
             DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
 
             IndexerHelper.InvertIndex invertIndex = mapper.load(IndexerHelper.InvertIndex.class, word.toString());
             if (invertIndex == null){
                 // if it's a new word, update num column
-                IndexerHelper.RowCounts rowCounts = mapper.load(IndexerHelper.RowCounts.class, IndexerHelper.InvertIndex.class.getName());
+                IndexerHelper.RowCounts rowCounts = mapper.load(IndexerHelper.RowCounts.class, "InvertIndex");
                 if (rowCounts == null){
                     rowCounts = new IndexerHelper.RowCounts();
-                    rowCounts.setTableClassName(IndexerHelper.InvertIndex.class.getName());
+                    rowCounts.setTableClassName("InvertIndex");
                 }
                 rowCounts.setRowCount(rowCounts.getRowCount() + 1);
                 mapper.save(rowCounts);
@@ -80,12 +75,23 @@ public class InvertIndexMapReduce {
                 invertIndex.setWord(word.toString());
             }
             for (Text occur: occurs){
-                String[] tmp = occur.toString().split(",");
+                String[] tmp = occur.toString().split("@");
                 String docId = tmp[0].substring(1);
-                int count = Integer.parseInt(tmp[1].substring(0, tmp[1].length() - 1));
+                int count = tmp[1].trim().substring(1, tmp[1].length() - 2).split(",").length;
                 invertIndex.addInvertIndex(docId, count);
             }
-            mapper.save(invertIndex);
+
+            int minCount = 2;
+            while (invertIndex.nDoc() > 0){
+                try{
+                    mapper.save(invertIndex);
+                    break;
+                } catch (Exception e){
+                    invertIndex.shrink(minCount);
+                    minCount ++;
+                }
+            }
+
 
         }
     }
@@ -99,9 +105,9 @@ public class InvertIndexMapReduce {
             System.out.println("Usage: input_file output_file");
         }
         System.err.println("Set Job Instance");
-        Job job = Job.getInstance(config, "Word Count");
+        Job job = Job.getInstance(config, "Invert Index");
 
-        job.setJarByClass(HadoopWordCount.class);
+        job.setJarByClass(InvertIndexMapReduce.class);
         job.setMapperClass(MyMapper.class);
         job.setReducerClass(MyReducer.class);
         job.setNumReduceTasks(10);

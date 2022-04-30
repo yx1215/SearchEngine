@@ -7,35 +7,35 @@
     <version>1.0-SNAPSHOT</version>
     <name>CIS 455 Web Crawler</name>
     <url>http://www.cis.upenn.edu/~cis455</url>
-    
-    
+
+
     <properties>
-            <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-            <maven.compiler.source>8</maven.compiler.source>
-            <maven.compiler.target>8</maven.compiler.target>
-            <java.version>8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <java.version>11</java.version>
     </properties>
-    
-<repositories>
-    <repository>
-        <id>maven-repository</id>
-        <url>file://${project.basedir}/maven-repository</url>
-    </repository>
-</repositories>
+
+    <repositories>
+        <repository>
+            <id>maven-repository</id>
+            <url>file://${project.basedir}/maven-repository</url>
+        </repository>
+    </repositories>
     <dependencies>
 
-<!--<dependency>-->
-<!--	<groupId>edu.upenn.cis.cis455</groupId>-->
-<!--	<artifactId>homework-1</artifactId>-->
-<!--	<version>1.0-SNAPSHOT</version>-->
-<!--</dependency>-->
+        <dependency>
+            <groupId>edu.upenn.cis.cis455</groupId>
+            <artifactId>homework-1</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
 
-<!-- https://mvnrepository.com/artifact/com.sparkjava/spark-core -->
-<dependency>
-    <groupId>com.sparkjava</groupId>
-    <artifactId>spark-core</artifactId>
-    <version>2.7.2</version>
-</dependency>
+        <!-- https://mvnrepository.com/artifact/com.sparkjava/spark-core -->
+        <dependency>
+            <groupId>com.sparkjava</groupId>
+            <artifactId>spark-core</artifactId>
+            <version>2.7.2</version>
+        </dependency>
 
         <dependency>
             <groupId>edu.stanford.nlp</groupId>
@@ -80,22 +80,22 @@
             <version>1.10.19</version>
         </dependency>
 
-              <!-- https://mvnrepository.com/artifact/log4j/log4j -->
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
+        <!-- https://mvnrepository.com/artifact/log4j/log4j -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
             <version>2.17.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
             <version>2.17.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-slf4j-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
             <version>2.17.1</version>
-      </dependency>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/com.sleepycat/je -->
         <dependency>
             <groupId>com.sleepycat</groupId>
@@ -176,44 +176,43 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-<!--                            <mainClass>edu.upenn.cis.cis455.crawler.WebInterface</mainClass>-->
+                            <!--                            <mainClass>edu.upenn.cis.cis455.crawler.WebInterface</mainClass>-->
                             <mainClass>edu.upenn.cis.HadoopWordCount</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
             </plugin>
-           <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>exec-maven-plugin</artifactId>
-              <version>1.6.0</version>
-              <executions>
-              <execution>
-                <id>crawler</id>
-                <goals><goal>java</goal></goals>
-              <configuration>
-                <mainClass>edu.upenn.cis.cis455.crawler.Crawler</mainClass>
-                <arguments>
-<!--                  <argument>https://crawltest.cis.upenn.edu/</argument>-->
-<!--                    <argument>https://en.wikipedia.org/</argument>-->
-                    <argument>https://www.nytimes.com/</argument>
-                  <argument>./database</argument>
-                  <argument>2</argument>
-                  <argument>100</argument>
-                </arguments>
-              </configuration>
-              </execution>
-              <execution>
-                <id>web</id>
-                <goals><goal>java</goal></goals>
-              </execution>
-              </executions>
-<!--              <configuration>-->
-<!--                <mainClass>edu.upenn.cis.cis455.crawler.WebInterface</mainClass>-->
-<!--                <arguments>-->
-<!--                  <argument>./database</argument>-->
-<!--                  <argument>www</argument>-->
-<!--                </arguments>-->
-<!--              </configuration>-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <id>crawler</id>
+                        <goals><goal>java</goal></goals>
+                        <configuration>
+                            <mainClass>edu.upenn.cis.cis455.crawler.Crawler</mainClass>
+                            <arguments>
+                                <argument>https://crawltest.cis.upenn.edu/</argument>
+                                <!--                    <argument>https://en.wikipedia.org/</argument>-->
+                                <argument>./database</argument>
+                                <argument>1</argument>
+                                <argument>50</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>web</id>
+                        <goals><goal>java</goal></goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>edu.upenn.cis.cis455.crawler.WebInterface</mainClass>
+                    <arguments>
+                        <argument>./database</argument>
+                        <argument>www</argument>
+                    </arguments>
+                </configuration>
             </plugin>
         </plugins>
     </build>

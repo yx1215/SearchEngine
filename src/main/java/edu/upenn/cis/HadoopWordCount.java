@@ -7,6 +7,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.SortedMapWritable;
 
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -19,6 +20,7 @@ import org.jsoup.Jsoup;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
@@ -32,31 +34,37 @@ public class HadoopWordCount {
         @Override
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             String docId = key.toString();
-            String htmlText = Jsoup.parse(value.toString()).text();
+            String htmlText = Jsoup.parse(value.toString()).text().replaceAll("[\\p{Punct}&&[^.]]+", " ");
             ArrayList<String> words = IndexerHelper.lemmatize(htmlText);
             System.err.println(words);
+            int pos = 0;
             for (String word: words){
-                if (word.matches("[a-zA-Z\\d\\p{Punct}]+")){
-                    context.write(new Text(docId), new Text(word));
+                if (word.matches("[a-zA-Z\\d]+")){
+                    context.write(new Text(docId), new Text(word + " " + pos));
                 }
+                pos ++;
             }
         }
     }
 
-    public static class MyReducer extends Reducer<Text, Text, Text, IntWritable>{
+    public static class MyReducer extends Reducer<Text, Text, Text, Text>{
 
         @Override
         public void reduce(Text docId, Iterable<Text> words, Context context) throws IOException, InterruptedException {
-            HashMap<String, Integer> wordCountMap = new HashMap<>();
+            HashMap<String, List<Integer>> wordCountMap = new HashMap<>();
             for (Text tmp: words){
-                if (!wordCountMap.containsKey(tmp.toString())){
-                    wordCountMap.put(tmp.toString(), 0);
+                String word = tmp.toString().split(" ")[0];
+                int pos = Integer.parseInt(tmp.toString().split(" ")[1]);
+                if (!wordCountMap.containsKey(word)){
+                    wordCountMap.put(word, new ArrayList<>());
                 }
-                wordCountMap.put(tmp.toString(), wordCountMap.get(tmp.toString()) + 1);
+                List<Integer> curPos = wordCountMap.get(word);
+                curPos.add(pos);
+                wordCountMap.put(word, curPos);
             }
 
-            for (String tmp: wordCountMap.keySet()){
-                context.write(new Text("(" + docId + "," + tmp + ")"), new IntWritable(wordCountMap.get(tmp)));
+            for (String word: wordCountMap.keySet()){
+                context.write(new Text("(" + docId + "," + word + ")"), new Text(wordCountMap.get(word).toString()));
             }
         }
     }
@@ -75,11 +83,11 @@ public class HadoopWordCount {
         job.setJarByClass(HadoopWordCount.class);
         job.setMapperClass(MyMapper.class);
         job.setReducerClass(MyReducer.class);
-        job.setNumReduceTasks(10);
+        job.setNumReduceTasks(1);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
         job.setInputFormatClass(CustomFileInputFormat.class);
 
         System.err.println(otherArgs[0]);
@@ -97,3 +105,4 @@ public class HadoopWordCount {
         }
     }
 }
+
