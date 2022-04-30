@@ -27,9 +27,10 @@ import com.amazonaws.services.s3.model.S3Object;
 //output: URL outlinks
 
 public class PageRankS3PrepareMapper extends Mapper<LongWritable, Text, Text, Text>{
-	static final String S3BUCKET_NAME = "searchengine";
+	static final String S3BUCKET_NAME = "pagerank1";
 	static final String SEPARATOR = " ";
 	
+	@SuppressWarnings("deprecation")
 	private AmazonS3 s3Client = new AmazonS3Client(new DefaultAWSCredentialsProviderChain());
 		
     private String getStringFromInputStream(InputStream input) throws IOException {

@@ -11,9 +11,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-//change to crawler input
-//import URLExtractor;
-//import database.*;
+import database.*;
 
 public class PageRankGetURLs {
 	

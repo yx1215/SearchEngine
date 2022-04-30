@@ -27,7 +27,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 public class PageRankGetObjectS3 {
-	private static String bucketName = "tinysearchengine-mapreduce";
+	private static String bucketName = "pagerankdoc";
 	private static String keyName = "";
 	private static AWSCredentialsProvider s3CredentialProvider = DefaultAWSCredentialsProviderChain.getInstance();
 	private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withCredentials(s3CredentialProvider).build();
