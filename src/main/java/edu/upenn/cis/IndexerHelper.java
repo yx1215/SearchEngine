@@ -66,7 +66,14 @@ public class IndexerHelper {
         private String docId;
         // word to numOccur
         private HashMap<String, Integer> forwardIndex = new HashMap<>();
+        // word hit lists
+        private HashMap<String, List<Integer>> hitLists = new HashMap<>();
         private int squareNorm;
+
+        @DynamoDBAttribute(attributeName = "hitLists")
+        public HashMap<String, List<Integer>> getHitLists() {return hitLists;}
+
+        public void setHitLists(HashMap<String, List<Integer>> hitLists) {this.hitLists = hitLists;}
 
         @DynamoDBAttribute(attributeName = "forwardIndex")
         public HashMap<String, Integer> getForwardIndex() { return forwardIndex;}
@@ -85,9 +92,36 @@ public class IndexerHelper {
 
         public ForwardIndex(){}
 
-        public void addForwardIndex(String word, int numOccur){
-            this.squareNorm += Math.pow(numOccur, 2);
-            this.forwardIndex.put(word, numOccur);
+        public void addForwardIndex(String word, Integer numOccurs){
+            if (this.forwardIndex.get(word) != null) {
+                int orig = this.forwardIndex.get(word);
+                this.squareNorm -= Math.pow(orig, 2);
+            }
+            this.squareNorm += Math.pow(numOccurs, 2);
+            this.forwardIndex.put(word, numOccurs);
+        }
+
+        public void addHitLists(String word, List<Integer> occurs){
+            if (occurs.size() > 5){
+                occurs = occurs.subList(0, 5);
+            }
+            this.hitLists.put(word, occurs);
+        }
+
+        public void shrinkHitLists(int maxL){
+            if (maxL == 0){
+                this.hitLists.clear();
+            }
+            else {
+                for (String word: this.forwardIndex.keySet()){
+                    List<Integer> curPos = this.hitLists.get(word);
+                    Collections.sort(curPos);
+
+                    if (curPos.size() > maxL){
+                        this.hitLists.put(word, curPos.subList(0, maxL));
+                    }
+                }
+            }
         }
 
     }
@@ -113,6 +147,15 @@ public class IndexerHelper {
 
         public void addInvertIndex(String docId, int numOccur){
             this.invertIndex.put(docId, numOccur);
+        }
+
+        public void shrink(int minCount){
+            HashMap<String, Integer> copy = new HashMap<>(this.invertIndex);
+            for (String docId: copy.keySet()){
+                if (this.invertIndex.get(docId) < minCount){
+                    this.invertIndex.remove(docId);
+                }
+            }
         }
 
     }
@@ -155,50 +198,12 @@ public class IndexerHelper {
 
         // display tokens
         for (CoreLabel tok : document.tokens()) {
-//            System.out.printf("%s\t%s%n", tok.word(), tok.lemma());
             words.add(tok.lemma().toLowerCase(Locale.ROOT));
         }
         return words;
     }
 
-    public static List<Integer> processQuery(String query, IndexStorage db, int n){
-        Properties props = new Properties();
-        // set the list of annotators to run
-        props.setProperty("annotators", "tokenize,ssplit,pos,lemma");
-        StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-        CoreDocument document = pipeline.processToCoreDocument(query);
-        ArrayRealVector queryWeights = new ArrayRealVector();
-        for (CoreLabel tok : document.tokens()) {
-            queryWeights = (ArrayRealVector) queryWeights.append(db.getInverseDocFreq(tok.lemma()));
-        }
-        HashMap<Integer, Double> docScore = new HashMap<>();
-        HashSet<Integer> allDocId = new HashSet<>();
-        for (CoreLabel tok : document.tokens()) {
-            allDocId.addAll(db.getAllDocId(tok.lemma()));
-        }
-        System.out.println(allDocId.size());
-        for (int tmp: allDocId){
-            ArrayRealVector docWeights = new ArrayRealVector();
-            for (CoreLabel tok : document.tokens()) {
-                docWeights = (ArrayRealVector) docWeights.append(db.getTermFreq(tmp, tok.lemma()));
-            }
-            double score = docWeights.dotProduct(queryWeights);
-            if (score > 0){
-                docScore.put(tmp, score);
-            }
-        }
-        docScore = docScore.entrySet()
-                .stream()
-                .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
-                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,
-                                LinkedHashMap::new));
-        System.out.println(docScore);
-        System.out.println(new ArrayList<>(docScore.keySet()).subList(0, n));
-//        System.out.println(docScore);
-        return new ArrayList<>(docScore.keySet()).subList(0, n);
-    }
-
-    public static List<String> processQuery2(String query, int topN){
+    public static List<String> processQuery(String query, int topN){
 
         AmazonDynamoDB dynamoDB = getDynamoDB();
         Properties props = new Properties();
@@ -219,6 +224,12 @@ public class IndexerHelper {
         for (String docId: allDocIds){
             ArrayRealVector docWeights = getDocWeights(docId, words, dynamoDB);
             double score = docWeights.dotProduct(queryWeights);
+            List<Double> avgDist = getWordsDistance(docId, words, dynamoDB);
+            if (avgDist != null){
+                for (Double dist: avgDist){
+                    score += 1 / dist;
+                }
+            }
             if (score > 0){
                 docScore.put(docId, score);
             }
@@ -229,10 +240,42 @@ public class IndexerHelper {
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,
                         LinkedHashMap::new));
 
-//        System.out.println(docScore);
         List<String> topNDocId = new ArrayList<>(docScore.keySet()).subList(0, topN);
         System.out.println(topNDocId);
         return getUrls(topNDocId, dynamoDB);
+    }
+
+    public static List<Double> getWordsDistance(String docId, List<String> words, AmazonDynamoDB dynamoDB){
+        DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
+        ForwardIndex forwardIndex = mapper.load(ForwardIndex.class, docId);
+        if (forwardIndex == null){
+            return null;
+        }
+        HashMap<String, List<Integer>> hitLists = forwardIndex.getHitLists();
+        List<Double> avgDist = new ArrayList<>();
+
+        for (int i=0;i<words.size()-1;i++){
+            List<Integer> curWordHitList = hitLists.getOrDefault(words.get(i), new ArrayList<>());
+            List<Integer> nextWordHitList = hitLists.getOrDefault(words.get(i+1), new ArrayList<>());
+            double distances = 0;
+
+            for (int pos1: curWordHitList){
+                int minLength = Integer.MAX_VALUE;
+                for (int pos2: nextWordHitList){
+                    int dist = Math.abs(pos2 - pos1);
+                    if (dist < minLength){
+                        minLength = dist;
+                    }
+                }
+                distances += minLength;
+            }
+            if (curWordHitList.size() > 0){
+                avgDist.add(distances / curWordHitList.size());
+            } else {
+                avgDist.add((double) Integer.MAX_VALUE);
+            }
+        }
+        return avgDist;
     }
 
     public static ArrayRealVector getDocWeights(String docId, List<String> words, AmazonDynamoDB dynamoDB){
@@ -255,7 +298,7 @@ public class IndexerHelper {
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
 
         InvertIndex invertIndex = mapper.load(InvertIndex.class, word);
-        RowCounts rowCounts = mapper.load(RowCounts.class, ForwardIndex.class.getName());
+        RowCounts rowCounts = mapper.load(RowCounts.class, "ForwardIndex");
         int totalDoc = rowCounts.getRowCount();
         if (invertIndex == null){
             System.out.println("word: " + word + "is not indexed.");
@@ -268,6 +311,10 @@ public class IndexerHelper {
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
 
         ForwardIndex forwardIndex = mapper.load(ForwardIndex.class, docId);
+        if (forwardIndex == null) {
+            return 0.0;
+        }
+
         double norm = Math.pow(forwardIndex.getSquareNorm(), 0.5);
         if (forwardIndex.getForwardIndex().get(word) == null){
             return 0.0;
@@ -282,7 +329,17 @@ public class IndexerHelper {
         for (String word: words){
             InvertIndex invertIndex = mapper.load(InvertIndex.class, word);
             if (invertIndex != null){
-                docIds.addAll(invertIndex.getInvertIndex().keySet());
+                HashMap<String, Integer> sortedInvertIndex = invertIndex.getInvertIndex()
+                        .entrySet()
+                        .stream()
+                        .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
+                        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,
+                                LinkedHashMap::new));
+                if (sortedInvertIndex.size() > 50){
+                    docIds.addAll(new ArrayList<>(sortedInvertIndex.keySet()).subList(0, 50));
+                } else {
+                    docIds.addAll(sortedInvertIndex.keySet());
+                }
             }
         }
         return docIds;

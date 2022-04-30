@@ -21,6 +21,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 import java.io.IOException;
+import java.util.*;
 
 public class ForwardIndexMapReduce {
     private static final Log LOG = LogFactory.getLog(
@@ -35,12 +36,12 @@ public class ForwardIndexMapReduce {
             String word;
             if (curLine.length == 2){
                 String tmpKey = curLine[0].substring(1);
-                String count = curLine[1].trim();
+                String occurs = curLine[1].trim();
                 String[] keys = tmpKey.split(",");
                 if (keys.length == 2){
                     docId = keys[0];
                     word = keys[1];
-                    context.write(new Text(docId), new Text("("+word+","+count+")"));
+                    context.write(new Text(docId), new Text("("+word+"@"+occurs+")"));
                 }
             }
         }
@@ -50,7 +51,7 @@ public class ForwardIndexMapReduce {
 
         @Override
         public void reduce(Text docId, Iterable<Text> wordOccurs, Context context) throws IOException, InterruptedException {
-            System.out.println(docId);
+            System.err.println(docId);
             AWSCredentials credentials = new BasicAWSCredentials(
                     IndexerHelper.accessKey,
                     IndexerHelper.secretKey
@@ -64,10 +65,10 @@ public class ForwardIndexMapReduce {
             IndexerHelper.ForwardIndex forwardIndex = mapper.load(IndexerHelper.ForwardIndex.class, docId.toString());
             if (forwardIndex == null){
                 // if it's a new doc, update num column
-                IndexerHelper.RowCounts rowCounts = mapper.load(IndexerHelper.RowCounts.class, IndexerHelper.ForwardIndex.class.getName());
+                IndexerHelper.RowCounts rowCounts = mapper.load(IndexerHelper.RowCounts.class, "ForwardIndex");
                 if (rowCounts == null){
                     rowCounts = new IndexerHelper.RowCounts();
-                    rowCounts.setTableClassName(IndexerHelper.ForwardIndex.class.getName());
+                    rowCounts.setTableClassName("ForwardIndex");
                 }
                 rowCounts.setRowCount(rowCounts.getRowCount() + 1);
                 mapper.save(rowCounts);
@@ -76,13 +77,36 @@ public class ForwardIndexMapReduce {
                 forwardIndex.setDocId(docId.toString());
             }
             for (Text occur: wordOccurs){
-                String[] tmp = occur.toString().split(",");
+                String[] tmp = occur.toString().split("@");
                 String word = tmp[0].substring(1);
-                int count = Integer.parseInt(tmp[1].substring(0, tmp[1].length() - 1));
-                forwardIndex.addForwardIndex(word, count);
-            }
-            mapper.save(forwardIndex);
+                String[] occurs = tmp[1].trim().substring(1, tmp[1].length() - 2).split(",");
 
+                List<Integer> positions = new ArrayList<>();
+                for (String pos: occurs){
+                    positions.add(Integer.parseInt(pos.trim()));
+                }
+                Collections.sort(positions);
+                forwardIndex.addForwardIndex(word, positions.size());
+                forwardIndex.addHitLists(word, positions);
+            }
+            int maxL = 4;
+            boolean saved = false;
+            while (maxL >= 0){
+                try {
+                    mapper.save(forwardIndex);
+                    saved = true;
+                    break;
+                } catch (Exception e){
+                    forwardIndex.shrinkHitLists(maxL);
+                    maxL --;
+                    e.printStackTrace();
+                }
+            }
+            if (!saved){
+                IndexerHelper.RowCounts rowCounts = mapper.load(IndexerHelper.RowCounts.class, "ForwardIndex");
+                rowCounts.setRowCount(rowCounts.getRowCount() - 1);
+                mapper.save(rowCounts);
+            }
         }
     }
 
@@ -95,9 +119,9 @@ public class ForwardIndexMapReduce {
             System.out.println("Usage: input_file output_file");
         }
         System.err.println("Set Job Instance");
-        Job job = Job.getInstance(config, "Word Count");
+        Job job = Job.getInstance(config, "Forward Index");
 
-        job.setJarByClass(HadoopWordCount.class);
+        job.setJarByClass(ForwardIndexMapReduce.class);
         job.setMapperClass(MyMapper.class);
         job.setReducerClass(MyReducer.class);
         job.setNumReduceTasks(10);
