@@ -202,9 +202,7 @@ public class IndexerHelper {
         }
         return words;
     }
-
     public static List<String> processQuery(String query, int topN){
-
         AmazonDynamoDB dynamoDB = getDynamoDB();
         Properties props = new Properties();
         // set the list of annotators to run
@@ -221,10 +219,15 @@ public class IndexerHelper {
         HashMap<String, Double> docScore = new HashMap<>();
         ArrayRealVector queryWeights = getQueryWeights(words, dynamoDB);
 
-        for (String docId: allDocIds){
-            ArrayRealVector docWeights = getDocWeights(docId, words, dynamoDB);
+        long start = new Date().getTime();
+        List<ForwardIndex> forwardIndices = getBatchForwardIndices(allDocIds, dynamoDB);
+        System.out.println(new Date().getTime() - start);
+
+        for (ForwardIndex forwardIndex: forwardIndices){
+            String docId = forwardIndex.getDocId();
+            ArrayRealVector docWeights = getDocWeights(forwardIndex, words);
             double score = docWeights.dotProduct(queryWeights);
-            List<Double> avgDist = getWordsDistance(docId, words, dynamoDB);
+            List<Double> avgDist = getWordsDistance(forwardIndex, words);
             if (avgDist != null){
                 for (Double dist: avgDist){
                     score += 1 / dist;
@@ -245,10 +248,24 @@ public class IndexerHelper {
         return getUrls(topNDocId, dynamoDB);
     }
 
-    public static List<Double> getWordsDistance(String docId, List<String> words, AmazonDynamoDB dynamoDB){
+    public static List<ForwardIndex> getBatchForwardIndices(Set<String> docIds, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
-        ForwardIndex forwardIndex = mapper.load(ForwardIndex.class, docId);
-        if (forwardIndex == null){
+        ArrayList<ForwardIndex> itemsToGet = new ArrayList<>();
+        for (String docId: docIds){
+            ForwardIndex cur = new ForwardIndex();
+            cur.setDocId(docId);
+            itemsToGet.add(cur);
+        }
+        Map<String, List<Object>> items = mapper.batchLoad(itemsToGet);
+        ArrayList<ForwardIndex> forwardIndices = new ArrayList<>();
+        for (Object obj: items.get("ForwardIndex")){
+            forwardIndices.add((ForwardIndex) obj);
+        }
+        return forwardIndices;
+    }
+    public static List<Double> getWordsDistance(ForwardIndex forwardIndex, List<String> words){
+
+        if (forwardIndex == null || forwardIndex.getHitLists() == null){
             return null;
         }
         HashMap<String, List<Integer>> hitLists = forwardIndex.getHitLists();
@@ -278,10 +295,10 @@ public class IndexerHelper {
         return avgDist;
     }
 
-    public static ArrayRealVector getDocWeights(String docId, List<String> words, AmazonDynamoDB dynamoDB){
+    public static ArrayRealVector getDocWeights(ForwardIndex forwardIndex, List<String> words){
         ArrayRealVector docWeights = new ArrayRealVector();
         for (String word: words) {
-            docWeights = (ArrayRealVector) docWeights.append(getTermFreq(docId, word, dynamoDB));
+            docWeights = (ArrayRealVector) docWeights.append(getTermFreq(forwardIndex, word));
         }
         return docWeights;
     }
@@ -307,11 +324,8 @@ public class IndexerHelper {
         return  Math.log10((double) totalDoc / invertIndex.nDoc());
     }
 
-    public static double getTermFreq(String docId, String word, AmazonDynamoDB dynamoDB){
-        DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
-
-        ForwardIndex forwardIndex = mapper.load(ForwardIndex.class, docId);
-        if (forwardIndex == null) {
+    public static double getTermFreq(ForwardIndex forwardIndex, String word){
+        if (forwardIndex == null || forwardIndex.getForwardIndex() == null) {
             return 0.0;
         }
 
