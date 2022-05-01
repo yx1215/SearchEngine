@@ -73,6 +73,7 @@ public class InvertIndexMapReduce {
 
                 invertIndex = new IndexerHelper.InvertIndex();
                 invertIndex.setWord(word.toString());
+                invertIndex.setnDoc(0);
             }
             for (Text occur: occurs){
                 String[] tmp = occur.toString().split("@");
@@ -82,7 +83,7 @@ public class InvertIndexMapReduce {
             }
 
             int minCount = 2;
-            while (invertIndex.nDoc() > 0){
+            while (true){
                 try{
                     mapper.save(invertIndex);
                     break;
