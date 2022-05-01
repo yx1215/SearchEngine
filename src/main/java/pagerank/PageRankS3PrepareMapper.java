@@ -27,7 +27,7 @@ import com.amazonaws.services.s3.model.S3Object;
 //output: URL outlinks
 
 public class PageRankS3PrepareMapper extends Mapper<LongWritable, Text, Text, Text>{
-	static final String S3BUCKET_NAME = "pagerank1";
+	static final String S3BUCKET_NAME = "pagerankdoc";
 	static final String SEPARATOR = " ";
 	
 	@SuppressWarnings("deprecation")

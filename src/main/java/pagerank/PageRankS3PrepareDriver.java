@@ -11,6 +11,9 @@ import org.apache.hadoop.util.Tool;
 public class PageRankS3PrepareDriver extends Configured implements Tool{
 	@Override
 	public int run(String[] arg0) throws Exception {
+		//String className = this.getClass().getSimpleName(); 
+        //System.out.println("Name:" + className);
+        
 		// TODO Auto-generated method stub
 		Job job = Job.getInstance(); 
 	    job.setJobName("PageRankReadFromS3");
@@ -26,6 +29,8 @@ public class PageRankS3PrepareDriver extends Configured implements Tool{
 	  
 	    FileInputFormat.setInputPaths(job, new Path(arg0[0]));
 	    FileOutputFormat.setOutputPath(job, new Path(arg0[1]));
+	    
+	    
 	    
 		return job.waitForCompletion(true) ? 0 : 1;
 	}
