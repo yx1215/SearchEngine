@@ -16,8 +16,8 @@ public class StorageFactory {
     public static StorageInterface getDatabaseInstance() {
         // TODO: factory object, instantiate your storage server    	
     	AWSCredentials credentials = new BasicAWSCredentials(
-    			"AKIAQEIBNFJAG3GIUY6J", 
-    			"fEBTmouLv0MddAOco7T0R0dmLDwHIcQsZwrAyH8b"
+    			credentialSet.AccessKeyID, 
+    			credentialSet.SecretAccessKey
     			);
     	AmazonS3 s3client = AmazonS3ClientBuilder
     			  .standard()
