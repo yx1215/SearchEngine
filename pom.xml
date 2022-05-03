@@ -177,41 +177,9 @@
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
                             <!--                            <mainClass>edu.upenn.cis.cis455.crawler.WebInterface</mainClass>-->
-                            <mainClass>edu.upenn.cis.HadoopWordCount</mainClass>
+                            <mainClass>edu.upenn.cis.utils.MyPlayGround</mainClass>
                         </manifest>
                     </archive>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <executions>
-                    <execution>
-                        <id>crawler</id>
-                        <goals><goal>java</goal></goals>
-                        <configuration>
-                            <mainClass>edu.upenn.cis.cis455.crawler.Crawler</mainClass>
-                            <arguments>
-                                <argument>https://crawltest.cis.upenn.edu/</argument>
-                                <!--                    <argument>https://en.wikipedia.org/</argument>-->
-                                <argument>./database</argument>
-                                <argument>1</argument>
-                                <argument>50</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>web</id>
-                        <goals><goal>java</goal></goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <mainClass>edu.upenn.cis.cis455.crawler.WebInterface</mainClass>
-                    <arguments>
-                        <argument>./database</argument>
-                        <argument>www</argument>
-                    </arguments>
                 </configuration>
             </plugin>
         </plugins>
