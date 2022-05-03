@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -40,13 +41,15 @@ public class Crawler implements CrawlMaster {
     ///// TODO: you'll need to flesh all of this out. You'll need to build a thread
     // pool of CrawlerWorkers etc.
 
-    static final int NUM_WORKERS = 10;
+    static final int NUM_WORKERS = 16;
     String startUrl = null;
     public StorageInterface db = null;
     int maxSize = 0;
     int count = 0; 
     public AmazonSQS sqs;
     public String fifoQueueUrl;
+    public String queue;
+    public static String fileId = UUID.randomUUID().toString();
     private static AtomicLong numOfFile = new AtomicLong(0);
     public ConcurrentHashMap<Thread, String> workerStatus = new ConcurrentHashMap<>();
     public ConcurrentHashMap<Thread, String> getWorkerStatus() {
@@ -137,12 +140,12 @@ public class Crawler implements CrawlMaster {
 //				  .withMaxNumberOfMessages(1);
 //		List<Message> sqsMessages = sqs.receiveMessage(receiveMessageRequest).getMessages();
 //    	//if over limits
-//    	if(numOfFile.get()>=count) {
-//    		return true;
+    	if(getNumOfFile()>=count) {
+    		return true;
 ////    		//queue is empty
 //    	}else if(workerStatus.size()>0 && !workerStatus.containsValue("working") && sqsMessages.size()==0) {
 //    		return true;
-//    	}
+    	}
         return false;
     }
 
@@ -174,8 +177,8 @@ public class Crawler implements CrawlMaster {
      */
     public static void main(String args[]) throws Exception {
         org.apache.logging.log4j.core.config.Configurator.setLevel("edu.upenn.cis.cis455", Level.INFO);
-        if (args.length < 2 || args.length > 4) {
-            System.out.println("Usage: Crawler {start URL} {max doc size in MB} {number of files to index}");
+        if (args.length < 3 || args.length > 5) {
+            System.out.println("Usage: Crawler {start URL} {max doc size in MB} {number of files to index}  {name of queue}");
             System.exit(1);
         }
 
@@ -183,10 +186,14 @@ public class Crawler implements CrawlMaster {
         String startUrl = args[0];
         Integer size = Integer.valueOf(args[1]);
         Integer count = args.length == 4 ? Integer.valueOf(args[2]) : 100;
-
+        credentialSet.queue = args[3];
+        System.out.println("queue is "+credentialSet.queue);
+        
         StorageInterface db = StorageFactory.getDatabaseInstance();
-
+        
+        
         Crawler crawler = new Crawler(startUrl, db, size, count);
+        
 
         System.out.println("Starting crawl of " + count + " documents, starting at " + startUrl);
         crawler.start();

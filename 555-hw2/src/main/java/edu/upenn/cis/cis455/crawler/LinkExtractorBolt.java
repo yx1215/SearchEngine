@@ -26,6 +26,7 @@ import edu.upenn.cis.cis455.storage.DomainItem;
 import edu.upenn.cis.cis455.storage.Storage;
 import edu.upenn.cis.cis455.storage.StorageFactory;
 import edu.upenn.cis.cis455.storage.UrlToDocIdItem;
+import edu.upenn.cis.cis455.storage.fileIdToDocIdItem;
 import edu.upenn.cis.cis455.storage.visitedURLItem;
 import edu.upenn.cis.stormlite.OutputFieldsDeclarer;
 import edu.upenn.cis.stormlite.TopologyContext;
@@ -44,6 +45,8 @@ public class LinkExtractorBolt implements IRichBolt{
     String executorId = UUID.randomUUID().toString();
     
     DynamoDBMapper mapper;
+    
+    String fileId = generateFileId();
 
     private OutputCollector collector;
 
@@ -112,18 +115,19 @@ public class LinkExtractorBolt implements IRichBolt{
 		return schema;
 	}
 	
-	public ArrayList<String> parseUrl(String content) {
-		Document doc = Jsoup.parse(content);
-		Elements links = doc.select("a[href]");
-        Element link;
-        ArrayList<String> urls = new ArrayList<>();
-        for(int j=0;j<links.size();j++){
-            link=links.get(j);
-            String item = link.attr("href").toString();
-            if(item.length()>0) {
-            	urls.add(item); 
-            }
+	public String generateFileId() {
+		return UUID.randomUUID().toString();
+	}
+	
+	public ArrayList<String> parseUrl(String content, String url) {
+		Document doc = Jsoup.parse(content, url);
+		Elements links = doc.select("a");
+		ArrayList<String> urls = new ArrayList<>();
+		for (Element link: links){
+            String nextLink = link.attr("abs:href");
+            urls.add(nextLink); 
         }
+
         return urls;
 	}
 	private byte[] getContentHash(String result) throws NoSuchAlgorithmException {
@@ -144,64 +148,80 @@ public class LinkExtractorBolt implements IRichBolt{
     	//if it not contains the hash,  add it into contentSeen table
 		ChecksumItem checksumItem = new ChecksumItem();
 		checksumItem.setHash(new String(digest));
-//		----mapper.save(checksumItem);
-		
-//		Crawler.getItem().contentSeen.addHash(digest);
-        //add document to db
-		
-//		Crawler.getItem().docTable.addDocByUrl(url, result, type);
 
 		UrlToDocIdItem urlToDocidItem = new UrlToDocIdItem();
 		urlToDocidItem.setUrl(url);
+		urlToDocidItem.setDocid();
+		
 		String docid =  urlToDocidItem.getDocid();
-//		----mapper.save(urlToDocidItem);
+		
 		
 		DocidToUrlItem docidToUrlItem = new DocidToUrlItem();
 		docidToUrlItem.setUrl(url);
 		docidToUrlItem.setDocid(docid);
-//		----mapper.save(docidToUrlItem);
 		
-		((Storage)Crawler.getItem().db).s3client.putObject(
-				credentialSet.documentBucket,
-				docid,
-				result);
+		fileIdToDocIdItem file_doc = new fileIdToDocIdItem();
+		file_doc.setDocId(docid);
 		
+		String filename = "temp"+this.fileId+".txt";
+		File myObj = new File(filename);
+	    if (myObj.createNewFile()) {
+	      System.out.println("File created: " + myObj.getName());
+//	      Crawler.getItem().fileId=UUID.randomUUID().toString();
+	    } else {
+	      System.out.println("File already exists."+url);
+	    }
+	    file_doc.setFileId(this.fileId);
+	    
+   	 	if(myObj.length()>50000000) {
+	    	
+			((Storage)Crawler.getItem().db).s3client.putObject(
+			credentialSet.documentBucket,
+			file_doc.getFileId(),
+			new File("temp"+file_doc.getFileId()+".txt"));
+			
+			System.out.println("File is full");
+			myObj.delete();	
+			this.fileId = generateFileId();
+	    }
+   	 	filename = "temp"+this.fileId+".txt";
+   	 	FileWriter myWriter;
+	    myWriter = new FileWriter(filename, true);
+	 	myWriter.write("\r\n ***DOCID: "+docid+"\r\n"+result+"\r\n");
+	 	myWriter.close();
+	 	
 		visitedURLItem urlItem = new visitedURLItem();
 		urlItem.setUrl(url);
-//		----mapper.save(urlItem);
 		
-//		Crawler.getItem().urlToTimeTable.addUrlToStore(url);\
 		DomainItem item = mapper.load(DomainItem.class, domain);
     	if(item!=null) {
     		item.setLastAccessTime(System.currentTimeMillis());
-//    		---mapper.save(item);
-//    		Crawler.getItem().domainTable.updateEntry(domain);
     	}else {
     		item = new DomainItem();
     		item.setDelay(RobotsHandler.getDelay());
     		item.setDomainName(domain);
     		item.setLastAccessTime(System.currentTimeMillis());
-//    		---mapper.save(item);
-//    		Crawler.getItem().domainTable.addDomain(domain, RobotsHandler.getDelay());
     	}
-    	mapper.batchSave(checksumItem, urlToDocidItem, docidToUrlItem, urlItem, item);
+    	mapper.batchSave(checksumItem, urlToDocidItem, docidToUrlItem, urlItem, item, file_doc);
     	logger.info(url+": downloading");
 		Crawler.getItem().incCount();
+		
+		System.out.println("num of file: "+Crawler.getItem().getNumOfFile());
 	}
 	private void addExtractUrl(String result, String url) {
-		ArrayList<String> urls = parseUrl(result);
+		ArrayList<String> urls = parseUrl(result, url);
     	//store urls to queue
     	for(String one: urls) {
-    		String processedUrl = processURL(one, url);
-    		if(processedUrl.length()==0) { continue; }
-    		if(!one.contains(".")&&!processedUrl.endsWith("/")) { processedUrl+="/"; }
-    		collector.emit(new Values<Object>(processedUrl));
+//    		String processedUrl = processURL(one, url);
+//    		if(processedUrl.length()==0) { continue; }
+//    		if(!one.contains(".")&&!processedUrl.endsWith("/")) { processedUrl+="/"; }
+    		collector.emit(new Values<Object>(one));
     	}
 	}
 	private String processURL(String one, String url) {
 		String processedUrl = "";
 		if(one.startsWith("http")) {
-			processedUrl = one.endsWith("/")?one:one+"/";
+			processedUrl = one;
 		}else if(one.startsWith("//")) {
 			if(url.startsWith("https")) {
 				processedUrl = "https:"+one;

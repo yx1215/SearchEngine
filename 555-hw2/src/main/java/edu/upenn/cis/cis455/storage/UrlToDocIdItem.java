@@ -30,7 +30,6 @@ public class UrlToDocIdItem {
 	}
 	
 	public UrlToDocIdItem() {
-		setDocid();
 	}
 	
 

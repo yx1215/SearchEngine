@@ -61,7 +61,7 @@ public class CrawlerQueueSpout implements IRichSpout{
 	public void nextTuple() {
 		String queueUrl = Crawler.getItem().fifoQueueUrl;
 		ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl)
-				  .withWaitTimeSeconds(1)
+				  .withWaitTimeSeconds(0)
 				  .withMaxNumberOfMessages(1);
 		List<Message> sqsMessages = sqs.receiveMessage(receiveMessageRequest).getMessages();
 		if(sqsMessages.size()>0) {

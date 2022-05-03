@@ -70,7 +70,12 @@ public class RobotsHandler {
 				}else if(item.toLowerCase().startsWith("allow")&&rule!=null) {
 //					rule.addAllow(item.split(":")[1].strip());
 				}else if(item.toLowerCase().startsWith("crawl-delay")&&rule!=null) {
-					rule.setDelay(Integer.parseInt(item.split(":")[1].strip()));
+					String time = item.split(":")[1].strip().split(" ")[0];
+					if(time.contains(".")) {
+						rule.setDelay(Integer.parseInt((String) time.subSequence(0, time.indexOf(".")))+1);
+					}else {
+						rule.setDelay(Integer.parseInt(time));
+					}
 				}else {
 					if(rule!=null) {
 						ruleMap.put(rule.getUserAgent(), rule);

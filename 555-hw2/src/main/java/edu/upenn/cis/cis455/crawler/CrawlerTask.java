@@ -34,9 +34,9 @@ public class CrawlerTask {
         
         TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout(QUEUE_SPOUT, spout, 1);
-        builder.setBolt(DOC_FETCHER_BOLT, docFetcherBolt, 4).fieldsGrouping(QUEUE_SPOUT, new Fields("domain"));
-        builder.setBolt(LINK_EXTRACTOR_BOLT, linkExtractorBolt, 4).shuffleGrouping(DOC_FETCHER_BOLT);
-        builder.setBolt(FILTER_URL_BOLT, filterUrlUpdateQueueBolt, 4).shuffleGrouping(LINK_EXTRACTOR_BOLT);
+        builder.setBolt(DOC_FETCHER_BOLT, docFetcherBolt, 1).fieldsGrouping(QUEUE_SPOUT, new Fields("domain"));
+        builder.setBolt(LINK_EXTRACTOR_BOLT, linkExtractorBolt, 1).shuffleGrouping(DOC_FETCHER_BOLT);
+        builder.setBolt(FILTER_URL_BOLT, filterUrlUpdateQueueBolt, 1).shuffleGrouping(LINK_EXTRACTOR_BOLT);
 //        builder.setBolt(DOM_PARSER_BOLT, domParserBolt, 4).shuffleGrouping(DOC_FETCHER_BOLT);
 //        builder.setBolt(PATH_MATCHER_BOLT, pathMatcherBolt, 4).shuffleGrouping(DOM_PARSER_BOLT);
 

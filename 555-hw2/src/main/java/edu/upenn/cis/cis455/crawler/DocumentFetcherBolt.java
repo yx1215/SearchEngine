@@ -22,8 +22,10 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 
 import edu.upenn.cis.cis455.crawler.utils.URLInfo;
+import edu.upenn.cis.cis455.storage.ChecksumItem;
 import edu.upenn.cis.cis455.storage.DomainItem;
 import edu.upenn.cis.cis455.storage.Storage;
+import edu.upenn.cis.cis455.storage.visitedURLItem;
 import edu.upenn.cis.stormlite.OutputFieldsDeclarer;
 import edu.upenn.cis.stormlite.TopologyContext;
 import edu.upenn.cis.stormlite.bolt.IRichBolt;
@@ -71,6 +73,7 @@ public class DocumentFetcherBolt implements IRichBolt{
 		String url = input.getStringByField("url");
 		hostname =  input.getStringByField("domain");
 		try {
+			 
 			String result = processURL(url);
 			logger.debug(getExecutorId() + " received " + url);
 			if(result!=null) {
@@ -160,13 +163,16 @@ public class DocumentFetcherBolt implements IRichBolt{
 		int size = info.get("size")!=null? Integer.parseInt(info.get("size")):0;
 		modifiedTime = info.get("modifiedTime")!=null? Long.parseLong(info.get("modifiedTime")): 0;
 		
+		if(mapper.load(visitedURLItem.class, url)!=null) {
+			System.out.println("The url is visited before: "+url);
+			return null;
+		}
+		
 		//if the path is refused by robots
 		RuleItem theRule = RobotsHandler.getTheRule(url, userAgent, hostname);
 		if(theRule!=null && !RobotsHandler.handleRobotFile(theRule)) {
 			return null;
 		}
-		//check the delay if it is stored, check the delay
-		//check conditions checkSize(url, size) && checkType(url, type)
 		if(!checkDelayTime(url, userAgent, hostname)||!checkSize(url, size)||!checkType(url, type)) {
 			return null;
 		}; 
@@ -189,6 +195,7 @@ public class DocumentFetcherBolt implements IRichBolt{
 				httpsCon = (HttpsURLConnection) urlObj.openConnection();
 				httpsCon.setRequestMethod("HEAD");
 				httpsCon.setRequestProperty("User-Agent", "cis455crawler");
+				httpsCon.setInstanceFollowRedirects(false);
 				httpsCon.connect();
 				if(httpsCon.getResponseCode()!=HttpURLConnection.HTTP_OK) {
 					System.out.println(url+"not 200 ok, the status code is "+httpsCon.getResponseCode());
@@ -203,6 +210,7 @@ public class DocumentFetcherBolt implements IRichBolt{
 				httpCon = (HttpURLConnection) urlObj.openConnection();
 				httpCon.setRequestMethod("HEAD");
 				httpCon.setRequestProperty("User-Agent", "cis455crawler");
+				httpCon.setInstanceFollowRedirects(false);
 				httpCon.connect();
 				if(httpCon.getResponseCode()!=HttpURLConnection.HTTP_OK) {
 					System.out.println("not 200 ok, the status code is "+httpCon.getResponseCode());
