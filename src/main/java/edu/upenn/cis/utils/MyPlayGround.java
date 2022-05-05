@@ -9,7 +9,7 @@ public class MyPlayGround {
 
     public static void main(String[] args) throws IOException {
         long start = new Date().getTime();
-        String query = "computer science";
+        String query = "new york times";
         List<String> urls = IndexerHelper.processQuery(query, 10);
         System.out.println("Search results for: " + query);
         for (String url: urls){

@@ -14,8 +14,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import edu.stanford.nlp.ling.*;
-import edu.stanford.nlp.pipeline.*;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
@@ -27,13 +25,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import static java.util.stream.Collectors.toMap;
 
+import static edu.upenn.cis.PageRank.PageRankHelper.PageRankItem;
 import edu.upenn.cis.utils.DocidToUrlItem;
 import edu.upenn.cis.utils.FileToDoc;
 import edu.upenn.cis.utils.UrlToDocId;
 import org.apache.commons.math3.linear.ArrayRealVector;
-import static java.util.stream.Collectors.toMap;
 
+import edu.stanford.nlp.ling.*;
+import edu.stanford.nlp.pipeline.*;
 
 public class IndexerHelper {
     public static String accessKey = "AKIAX5K2P2746CPKER5X";
@@ -213,12 +214,6 @@ public class IndexerHelper {
     }
     public static List<String> processQuery(String query, int topN){
         AmazonDynamoDB dynamoDB = getDynamoDB();
-        Properties props = new Properties();
-        // set the list of annotators to run
-        props.setProperty("annotators", "tokenize,ssplit,pos,lemma");
-        StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-        CoreDocument document = pipeline.processToCoreDocument(query);
-
 
         ArrayList<String> words = lemmatize(query);
 
@@ -228,23 +223,27 @@ public class IndexerHelper {
         ArrayRealVector queryWeights = getQueryWeights(words, dynamoDB);
 
         long start = new Date().getTime();
-        List<ForwardIndex> forwardIndices = getBatchForwardIndices(allDocIds, dynamoDB);
+        HashMap<String, ForwardIndex> forwardIndices = getBatchForwardIndices(allDocIds, dynamoDB);
+        HashMap<String, PageRankItem> pageRankItems = getBatchPageRank(allDocIds, dynamoDB);
         System.out.println(new Date().getTime() - start);
         System.out.println(queryWeights);
-        for (ForwardIndex forwardIndex: forwardIndices){
-            String docId = forwardIndex.getDocId();
+        for (String docId: forwardIndices.keySet()){
+            ForwardIndex forwardIndex = forwardIndices.get(docId);
+            PageRankItem pageRankItem = pageRankItems.get(docId);
             ArrayRealVector docWeights = getDocWeights(forwardIndex, words);
             double score = docWeights.dotProduct(queryWeights);
             List<Double> avgDist = getWordsDistance(forwardIndex, words);
 
             if (avgDist != null){
                 for (Double dist: avgDist){
-                    score += 2 / dist;
+                    score += 5 / dist;
                 }
             }
-            if (score > 0){
-                docScore.put(docId, score);
-            }
+
+            double pagerank = pageRankItem == null ? 0 : pageRankItem.getPagerank();
+
+            docScore.put(docId, pagerank * score);
+
         }
         docScore = docScore.entrySet()
                 .stream()
@@ -257,7 +256,24 @@ public class IndexerHelper {
         return getUrls(topNDocId, dynamoDB);
     }
 
-    public static List<ForwardIndex> getBatchForwardIndices(Set<String> docIds, AmazonDynamoDB dynamoDB){
+    public static HashMap<String, PageRankItem> getBatchPageRank(Set<String> docIds, AmazonDynamoDB dynamoDB){
+        DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
+        ArrayList<PageRankItem> itemsToGet = new ArrayList<>();
+        for (String docId: docIds){
+            PageRankItem cur = new PageRankItem();
+            cur.setDocId(docId);
+            itemsToGet.add(cur);
+        }
+        Map<String, List<Object>> items = mapper.batchLoad(itemsToGet);
+        HashMap<String, PageRankItem> map = new HashMap<>();
+        for (Object obj: items.get("PageRank")){
+            PageRankItem item = (PageRankItem) obj;
+            map.put(item.getDocId(), item);
+        }
+        return map;
+    }
+
+    public static HashMap<String, ForwardIndex> getBatchForwardIndices(Set<String> docIds, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         ArrayList<ForwardIndex> itemsToGet = new ArrayList<>();
         for (String docId: docIds){
@@ -266,11 +282,12 @@ public class IndexerHelper {
             itemsToGet.add(cur);
         }
         Map<String, List<Object>> items = mapper.batchLoad(itemsToGet);
-        ArrayList<ForwardIndex> forwardIndices = new ArrayList<>();
+        HashMap<String, ForwardIndex> map = new HashMap<>();
         for (Object obj: items.get("ForwardIndex")){
-            forwardIndices.add((ForwardIndex) obj);
+            ForwardIndex forwardIndex = (ForwardIndex) obj;
+            map.put(forwardIndex.getDocId(), forwardIndex);
         }
-        return forwardIndices;
+        return map;
     }
     public static List<Double> getWordsDistance(ForwardIndex forwardIndex, List<String> words){
 
