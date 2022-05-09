@@ -66,6 +66,7 @@ public class InvertIndexMapReduce {
                 invertIndex.setWord(word.toString());
                 invertIndex.setnDoc(0);
             }
+            // add the docId to the corresponding invert index.
             for (Text occur: occurs){
                 String[] tmp = occur.toString().split("@");
                 String docId = tmp[0].substring(1);
@@ -75,6 +76,7 @@ public class InvertIndexMapReduce {
 
             int minCount = 2;
 
+            // making sure that the invert index item does not exceed limit.
             while (invertIndex.getInvertIndex().size() > 0){
                 try{
                     mapper.save(invertIndex);

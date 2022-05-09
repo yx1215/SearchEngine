@@ -76,6 +76,7 @@ public class ForwardIndexMapReduce {
                 forwardIndex = new IndexerHelper.ForwardIndex();
                 forwardIndex.setDocId(docId.toString());
             }
+            // create the forward index item
             for (Text occur: wordOccurs){
                 String[] tmp = occur.toString().split("@");
                 String word = tmp[0].substring(1);
@@ -89,6 +90,8 @@ public class ForwardIndexMapReduce {
                 forwardIndex.addForwardIndex(word, positions.size());
                 forwardIndex.addHitLists(word, positions);
             }
+
+            // making sure the item does not exceed size.
             int maxL = 4;
             boolean saved = false;
             while (maxL >= 0){

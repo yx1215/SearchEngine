@@ -196,6 +196,7 @@ public class IndexerHelper {
                 .build();
     }
 
+    // given a string, we return a list of lemmatized words.
     public static ArrayList<String> lemmatize(String content){
 
         ArrayList<String> words = new ArrayList<>();
@@ -213,6 +214,8 @@ public class IndexerHelper {
         }
         return words;
     }
+
+    // given a search query, we return the documents in decreasing order of the score.
     public static List<String> processQuery(String query, int topN){
         AmazonDynamoDB dynamoDB = getDynamoDB();
 
@@ -261,6 +264,7 @@ public class IndexerHelper {
         return getUrls(topNDocId, dynamoDB);
     }
 
+    // batch load the pagerank item give docIds.
     public static HashMap<String, PageRankItem> getBatchPageRank(Set<String> docIds, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         ArrayList<PageRankItem> itemsToGet = new ArrayList<>();
@@ -278,6 +282,7 @@ public class IndexerHelper {
         return map;
     }
 
+    // given a list of docIds, we do batch load to get the forward indices for the documents.
     public static HashMap<String, ForwardIndex> getBatchForwardIndices(Set<String> docIds, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         ArrayList<ForwardIndex> itemsToGet = new ArrayList<>();
@@ -294,6 +299,8 @@ public class IndexerHelper {
         }
         return map;
     }
+
+    // calculate average word distance for a document given a query
     public static List<Double> getWordsDistance(ForwardIndex forwardIndex, List<String> words){
 
         if (forwardIndex == null || forwardIndex.getHitLists() == null){
@@ -326,6 +333,7 @@ public class IndexerHelper {
         return avgDist;
     }
 
+    // get the document vector
     public static ArrayRealVector getDocWeights(ForwardIndex forwardIndex, List<String> words){
         ArrayRealVector docWeights = new ArrayRealVector();
         for (String word: words) {
@@ -334,6 +342,7 @@ public class IndexerHelper {
         return docWeights;
     }
 
+    // get the query vector
     public static ArrayRealVector getQueryWeights(List<String> words, AmazonDynamoDB dynamoDB){
         ArrayRealVector queryWeights = new ArrayRealVector();
         for (String word: words){
@@ -347,6 +356,7 @@ public class IndexerHelper {
         return queryWeights;
     }
 
+    // give a word, we return the idf for that word
     public static Double getInverseDocFreq(String word, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
 
@@ -360,6 +370,7 @@ public class IndexerHelper {
         return  Math.log10((double) totalDoc / invertIndex.getnDoc());
     }
 
+    // given a forward index of a doc and a word, we return the term frequency
     public static double getTermFreq(ForwardIndex forwardIndex, String word){
         if (forwardIndex == null || forwardIndex.getForwardIndex() == null) {
             return 0.0;
@@ -372,6 +383,7 @@ public class IndexerHelper {
         return forwardIndex.getForwardIndex().get(word) / norm;
     }
 
+    // given a word list, we find all the docIds where the words occur top 30 most frequent;y for each word.
     public static Set<String> getAllDocId(List<String> words, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
 
@@ -395,6 +407,7 @@ public class IndexerHelper {
         return docIds;
     }
 
+    // given a list of docIds, we return the list of corresponding urls.
     public static List<String> getUrls(List<String> docIds, AmazonDynamoDB dynamoDB){
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
         List<String> urls = new ArrayList<>();
@@ -404,6 +417,8 @@ public class IndexerHelper {
         return urls;
     }
 
+    // given an url, we either download it directly from the internet or get it from S3.
+    // downloading directly from the internet is much faster than getting from S3.
     public static String getUrlContent(String url, boolean download) throws IOException {
         if (download){
             URL newUrl = new URL(url);
@@ -433,7 +448,7 @@ public class IndexerHelper {
             return fileContent.substring(startIndex, endIndex);
         }
     }
-
+    // create a dynamoDB table
     public static void createTable(Class c){
         AmazonDynamoDB dynamoDB = getDynamoDB();
         DynamoDBMapper mapper = new DynamoDBMapper(dynamoDB);
