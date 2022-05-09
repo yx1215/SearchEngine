@@ -71,6 +71,7 @@ public class IndexerHelper {
         private HashMap<String, Integer> forwardIndex = new HashMap<>();
         // word hit lists
         private HashMap<String, List<Integer>> hitLists = new HashMap<>();
+        // square norm of the words occurrences, used for calculating term frequency.
         private int squareNorm;
 
         @DynamoDBAttribute(attributeName = "hitLists")
@@ -219,6 +220,10 @@ public class IndexerHelper {
 
         Set<String> allDocIds = getAllDocId(words, dynamoDB);
         System.out.println(allDocIds.size());
+        if (allDocIds.size() == 0){
+            return new ArrayList<>();
+        }
+
         HashMap<String, Double> docScore = new HashMap<>();
         ArrayRealVector queryWeights = getQueryWeights(words, dynamoDB);
 
@@ -349,7 +354,7 @@ public class IndexerHelper {
         RowCounts rowCounts = mapper.load(RowCounts.class, "ForwardIndex");
         int totalDoc = rowCounts.getRowCount();
         if (invertIndex == null) {
-            System.out.println("word: " + word + "is not indexed.");
+            System.out.println("word: " + word + " is not indexed.");
             return 0.0;
         }
         return  Math.log10((double) totalDoc / invertIndex.getnDoc());

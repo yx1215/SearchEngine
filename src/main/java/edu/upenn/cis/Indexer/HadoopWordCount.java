@@ -36,7 +36,7 @@ public class HadoopWordCount {
             int pos = 0;
             for (String word: words){
                 if (word.matches("[a-zA-Z\\d]+")){
-                    context.write(new Text(docId), new Text(word + " " + pos));
+                    context.write(new Text(docId + " " + word), new Text(Integer.toString(pos)));
                 }
                 pos ++;
             }
@@ -46,22 +46,14 @@ public class HadoopWordCount {
     public static class MyReducer extends Reducer<Text, Text, Text, Text>{
 
         @Override
-        public void reduce(Text docId, Iterable<Text> words, Context context) throws IOException, InterruptedException {
-            HashMap<String, List<Integer>> wordCountMap = new HashMap<>();
-            for (Text tmp: words){
-                String word = tmp.toString().split(" ")[0];
-                int pos = Integer.parseInt(tmp.toString().split(" ")[1]);
-                if (!wordCountMap.containsKey(word)){
-                    wordCountMap.put(word, new ArrayList<>());
-                }
-                List<Integer> curPos = wordCountMap.get(word);
-                curPos.add(pos);
-                wordCountMap.put(word, curPos);
+        public void reduce(Text keys, Iterable<Text> positions, Context context) throws IOException, InterruptedException {
+            String docId = keys.toString().split(" ")[0];
+            String word = keys.toString().split(" ")[1];
+            List<String> poses = new ArrayList<>();
+            for (Text tmp: positions){
+                poses.add(tmp.toString());
             }
-
-            for (String word: wordCountMap.keySet()){
-                context.write(new Text("(" + docId + "," + word + ")"), new Text(wordCountMap.get(word).toString()));
-            }
+            context.write(new Text("(" + docId + "," + word + ")"), new Text(poses.toString()));
         }
     }
 
