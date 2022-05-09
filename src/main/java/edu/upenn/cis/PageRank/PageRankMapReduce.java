@@ -1,11 +1,6 @@
 package edu.upenn.cis.PageRank;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import edu.upenn.cis.Indexer.IndexerHelper;
-import edu.upenn.cis.utils.CustomFileInputFormat;
-import edu.upenn.cis.utils.DocidToUrlItem;
-import edu.upenn.cis.utils.UrlToDocId;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -20,16 +15,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import static edu.upenn.cis.Indexer.IndexerHelper.getDynamoDB;
 
