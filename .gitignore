@@ -28,3 +28,4 @@ hs_err_pid*
 /database/
 /.idea/
 /indexDatabase/
+/suggestion/.idea/
